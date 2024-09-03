@@ -1,0 +1,8 @@
+name: railways
+
+packages:
+  - packages/**
+
+scripts:
+  analyze:
+    exec: dart analyze .
