@@ -260,10 +260,10 @@
       "languageVersion": "3.4"
     }
   ],
-  "generated": "2024-08-29T17:30:16.752740Z",
+  "generated": "2024-09-04T11:20:04.035312Z",
   "generator": "pub",
-  "generatorVersion": "3.4.3",
-  "flutterRoot": "file:///C:/Flutter",
-  "flutterVersion": "3.22.2",
+  "generatorVersion": "3.5.1",
+  "flutterRoot": "file:///C:/flutter",
+  "flutterVersion": "3.24.1",
   "pubCache": "file:///C:/Users/czapp/AppData/Local/Pub/Cache"
 }

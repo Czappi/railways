@@ -1,6 +1,4 @@
-abstract class State {
+mixin ShouldEmit {
   /// Check if State have to be emited
-  bool shouldEmit(State previous) {
-    return true;
-  }
+  bool shouldEmit(covariant ShouldEmit previous);
 }
