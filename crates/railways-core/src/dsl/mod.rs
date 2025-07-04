@@ -1,16 +1,18 @@
-use std::{marker::PhantomData, ops::Deref, rc::Rc};
+use std::{marker::PhantomData, ops::Deref};
 
-use dyn_any::DynAny;
-
-pub trait LogicalNode<'a> {
-    fn name(&'a self) -> String;
-
-    fn input(&self, index: usize) -> Result<Link<'a, dyn std::any::Any>, String>;
+pub trait LogicalNode {
+    fn name(&self) -> String;
 }
 
-pub struct Node<'a, T: LogicalNode<'a> + ?Sized>(Box<T>, PhantomData<&'a T>);
+pub struct Node<T: LogicalNode + ?Sized>(Box<T>, PhantomData<T>);
 
-impl<'a, T: LogicalNode<'a>> Deref for Node<'a, T> {
+impl<T: LogicalNode + Sized> Node<T> {
+    pub fn new(node: T) -> Node<T> {
+        Node(Box::new(node), PhantomData)
+    }
+}
+
+impl<T: LogicalNode> Deref for Node<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -18,59 +20,68 @@ impl<'a, T: LogicalNode<'a>> Deref for Node<'a, T> {
     }
 }
 
-pub struct U64Node(u64);
-
-pub fn u64(value: u64) -> Link<'static, u64> {
-    U64Node::new(value)
-}
-
-impl U64Node {
-    pub fn new(value: u64) -> Link<'static, u64> {
-        Link(&Source {
-            node: &Node(Box::new(Self(value)), PhantomData),
-            index: 0,
-            p: PhantomData,
-        })
-    }
-}
-
-impl<'a> LogicalNode<'a> for U64Node {
-    fn name(&'a self) -> String {
-        self.0.to_string()
-    }
-
-    fn input<T>(index: usize) -> Result<Link<'a, T>, String> {
-        if std::any::TypeId::of::<T>() == std::any::TypeId::of::<u64>() {}
-    }
-}
-
-pub struct TNode<'a> {
-    id: Link<'a, u64>,
-}
-
-pub fn node<'a>(id: Link<'a, u64>) -> Node<TNode<'a>> {
-    Box::new(Node { id })
-}
-
-impl<'a> LogicalNode<'a> for Node<'a> {
-    fn name(&'a self) -> String {
-        "Node".to_owned()
-    }
-}
-
 pub struct Source<'a, T> {
-    pub node: &'a Node<'a, dyn LogicalNode<'a>>,
-    index: u64,
+    pub node: &'a dyn LogicalNode,
+    index: usize,
     p: PhantomData<T>,
 }
 
-pub struct Link<'a, T>(&'a Source<'a, T>);
+impl<'a, T> Source<'a, T> {
+    pub fn new(node: &'a dyn LogicalNode, index: usize) -> Self {
+        Self {
+            node,
+            index,
+            p: PhantomData,
+        }
+    }
+}
 
-#[test]
-fn test() {
-    let u = u64(69);
+#[cfg(test)]
+mod test {
+    use crate::dsl::{LogicalNode, Node, Source};
 
-    let node = node(u);
+    pub struct U64Node(u64);
 
-    println!("{}", node.id.0.node.);
+    impl U64Node {
+        pub fn new(value: u64) -> Self {
+            Self(value)
+        }
+
+        pub fn value<'a>(&'a self) -> Source<'a, u64> {
+            Source::new(self, 0)
+        }
+    }
+
+    pub fn u64(value: u64) -> Node<U64Node> {
+        Node::new(U64Node::new(value))
+    }
+
+    impl LogicalNode for U64Node {
+        fn name(&self) -> String {
+            self.0.to_string()
+        }
+    }
+
+    pub struct TNode<'a> {
+        id: Source<'a, u64>,
+    }
+
+    pub fn node<'a>(id: Source<'a, u64>) -> Node<TNode<'a>> {
+        Node::new(TNode { id })
+    }
+
+    impl<'a> LogicalNode for TNode<'a> {
+        fn name(&self) -> String {
+            "Node".to_owned()
+        }
+    }
+
+    #[test]
+    fn test() {
+        let u = u64(69);
+
+        let node = node(u.value());
+
+        assert_eq!(node.id.node.name(), String::from("69"));
+    }
 }
