@@ -1,5 +1,5 @@
 use std::{
-    any::TypeId,
+    any::{type_name, TypeId},
     hash::{Hash, Hasher},
     marker::PhantomData,
 };
@@ -18,6 +18,7 @@ pub struct Value<'a, T> {
 
 impl<'a, T> Hash for Value<'a, T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write(b"Value");
         state.write_u64(self.source.identity());
         Hash::hash(&self.index, state);
         Hash::hash(&self.p, state);
@@ -43,8 +44,12 @@ impl<'a, T: 'static> LogicalSource<'a> for Value<'a, T> {
         self.index
     }
 
-    fn ty(&self) -> TypeId {
-        TypeId::of::<T>()
+    fn info(&self) -> super::SourceInformation {
+        super::SourceInformation::builder()
+            .source_name("Value")
+            .ty(TypeId::of::<T>())
+            .ty_name(type_name::<T>())
+            .build()
     }
 }
 

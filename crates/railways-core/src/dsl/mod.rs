@@ -1,3 +1,4 @@
+pub mod execution_flow;
 pub mod node;
 pub mod value;
 
@@ -7,7 +8,10 @@ use std::{
 };
 
 pub use node::Node;
+use typed_builder::TypedBuilder;
 pub use value::Value;
+
+use crate::dsl::execution_flow::ExecutionFlow;
 
 pub trait Identify {
     fn identity(&self) -> u64;
@@ -27,12 +31,35 @@ pub trait LogicalNode<'a>: Identify {
     fn sources(&'a self) -> Vec<Box<dyn LogicalSource<'a> + 'a>>;
 }
 
+pub trait FlowControl<'a>: LogicalNode<'a> + Sized {
+    fn after(self, after: &'a dyn LogicalNode<'a>) -> Self;
+
+    fn execution_flow(&'a self) -> ExecutionFlow<'a> {
+        ExecutionFlow::new(self)
+    }
+}
+
 pub trait LogicalSource<'a>: Identify {
     fn source(&'a self) -> &'a dyn LogicalNode<'a>;
 
     fn index(&self) -> usize;
 
-    fn ty(&self) -> TypeId;
+    fn info(&self) -> SourceInformation;
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, TypedBuilder)]
+pub struct SourceInformation {
+    #[builder(default, setter(strip_option))]
+    ty: Option<TypeId>,
+
+    #[builder(default, setter(strip_option, into))]
+    ty_name: Option<String>,
+
+    #[builder(default, setter(strip_option, into))]
+    ty_value: Option<String>,
+
+    #[builder(default, setter(strip_option, into))]
+    source_name: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
