@@ -1,5 +1,7 @@
 pub mod dsl;
-//pub mod types;
+pub mod physical;
+pub mod plan;
+pub mod types;
 
 mod plans {
     use crate::dsl::{LogicalNode, Node};
@@ -10,7 +12,25 @@ mod plans {
     struct Pipeline;
 
     /// parallel primitive
+    ///
+    /// joins all threads of execution into one
+    ///
+    /// all threads will be waited at this pont to finish execution
     fn join<'a, T: LogicalNode<'a> + ?Sized>(
+        // Main "thread", which will be returned
+        main: Node<'a, T>,
+        // other "threads", which will be joined to the "main thread"
+        parallels: &'a [Node<'a, dyn LogicalNode<'a>>],
+    ) {
+        todo!()
+    }
+
+    /// parallel primitive
+    ///
+    /// collects all the threads of execution into one
+    ///
+    /// these parallels can be scheduled as seen fit by the scheduler
+    fn collect<'a, T: LogicalNode<'a> + ?Sized>(
         // Main "thread", which will be returned
         main: Node<'a, T>,
         // other "threads", which will be joined to the "main thread"

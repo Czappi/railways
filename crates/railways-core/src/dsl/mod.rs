@@ -3,7 +3,7 @@ pub mod node;
 pub mod value;
 
 use std::{
-    any::TypeId,
+    any::{type_name, TypeId},
     hash::{DefaultHasher, Hash, Hasher},
 };
 
@@ -29,13 +29,17 @@ pub trait LogicalNode<'a>: Identify {
     fn name(&self) -> String;
 
     fn sources(&'a self) -> Vec<Box<dyn LogicalSource<'a> + 'a>>;
+
+    fn targets(&'a self) -> Vec<Box<dyn LogicalTarget<'a> + 'a>>;
 }
 
 pub trait FlowControl<'a>: LogicalNode<'a> + Sized {
+    const INDEX: usize;
+
     fn after(self, after: &'a dyn LogicalNode<'a>) -> Self;
 
     fn execution_flow(&'a self) -> ExecutionFlow<'a> {
-        ExecutionFlow::new(self)
+        ExecutionFlow::new(self, Self::INDEX)
     }
 }
 
@@ -44,11 +48,11 @@ pub trait LogicalSource<'a>: Identify {
 
     fn index(&self) -> usize;
 
-    fn info(&self) -> SourceInformation;
+    fn info(&self) -> PinInformation;
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, TypedBuilder)]
-pub struct SourceInformation {
+pub struct PinInformation {
     #[builder(default, setter(strip_option))]
     ty: Option<TypeId>,
 
@@ -59,7 +63,10 @@ pub struct SourceInformation {
     ty_value: Option<String>,
 
     #[builder(default, setter(strip_option, into))]
-    source_name: Option<String>,
+    name: Option<String>,
+
+    #[builder(default, setter(strip_option, into))]
+    required: Option<bool>,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -77,10 +84,29 @@ impl<T> State<T> {
     }
 }
 
+pub trait LogicalTarget<'a>: Identify {
+    fn source(&'a self) -> Option<&'a dyn LogicalSource<'a>>;
+
+    fn index(&self) -> usize;
+
+    fn info(&self) -> PinInformation;
+
+    fn is_required(&self) -> bool;
+
+    fn boxed(self) -> Box<dyn LogicalTarget<'a> + 'a>
+    where
+        Self: Sized + 'a,
+    {
+        Box::new(self)
+    }
+}
+
 #[cfg(test)]
 mod test {
 
-    use crate::dsl::{Identify, LogicalNode, LogicalSource, Node, State, Value};
+    use crate::dsl::{
+        value::ValueTarget, Identify, LogicalNode, LogicalSource, LogicalTarget, Node, State, Value,
+    };
 
     #[derive(PartialEq, Eq, Hash)]
     pub struct U64Node(u64);
@@ -107,6 +133,10 @@ mod test {
         fn sources(&'a self) -> Vec<Box<dyn super::LogicalSource<'a> + 'a>> {
             vec![Box::new(self.value())]
         }
+
+        fn targets(&'a self) -> Vec<Box<dyn super::LogicalTarget<'a> + 'a>> {
+            Vec::new()
+        }
     }
 
     #[derive(PartialEq, Eq, Hash)]
@@ -125,6 +155,10 @@ mod test {
 
         fn sources(&'a self) -> Vec<Box<dyn super::LogicalSource<'a> + 'a>> {
             Vec::new()
+        }
+
+        fn targets(&'a self) -> Vec<Box<dyn super::LogicalTarget<'a> + 'a>> {
+            vec![ValueTarget::<'a, _, true>::new(&self.id, 0).boxed()]
         }
     }
 
@@ -148,6 +182,10 @@ mod test {
 
         fn sources(&'a self) -> Vec<Box<dyn super::LogicalSource<'a> + 'a>> {
             Vec::new()
+        }
+
+        fn targets(&'a self) -> Vec<Box<dyn super::LogicalTarget<'a> + 'a>> {
+            vec![ValueTarget::<'a, _, true>::new(&self.id, 0).boxed()]
         }
     }
 
