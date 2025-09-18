@@ -4,7 +4,11 @@ pub mod plan;
 pub mod types;
 
 mod plans {
-    use crate::dsl::{LogicalNode, Node};
+    use petgraph::visit::ControlFlow;
+
+    use crate::dsl::{
+        execution_flow::ExecutionFlow, list::List, LogicalNode, LogicalSource, Node, Value,
+    };
 
     /// - can be run multiple lines.
     /// - made of [Node]s
@@ -46,6 +50,18 @@ mod plans {
         T0: LogicalNode<'a> + Sized,
         T1: LogicalNode<'a> + Sized,
     {
+        todo!()
+    }
+
+    /// parallel iterator
+    ///
+    /// iters through a list of values
+    fn iter<'a, T>(list: List<'a, T>, iter_flow: ExecutionFlow<'a>) -> Value<'a, T> {
+        todo!()
+    }
+
+    /// collector for parallel iterators
+    fn iter_collect<'a, T>(value: Value<'a, T>, iter_flow: ExecutionFlow<'a>) -> List<'a, T> {
         todo!()
     }
 }
