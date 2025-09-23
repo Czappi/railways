@@ -4,7 +4,7 @@ pub mod node;
 pub mod value;
 
 use std::{
-    any::{type_name, TypeId},
+    any::TypeId,
     hash::{DefaultHasher, Hash, Hasher},
 };
 

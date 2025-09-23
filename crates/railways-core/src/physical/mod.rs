@@ -5,12 +5,12 @@ use thiserror::Error;
 use crate::physical::{
     morsel::Morsel,
     pipe::{ReceivePipe, SendPipe},
-    state::ExecutionState,
+    scope::TaskScope,
 };
 
 pub mod morsel;
 pub mod pipe;
-pub mod state;
+pub mod scope;
 pub mod task;
 
 #[derive(Error, Debug)]
@@ -22,10 +22,8 @@ pub trait ComputeNode {
         &'env self,
         receivers: &'env [ReceivePipe<Morsel>],
         senders: &'env [SendPipe<Morsel>],
-        state: &'run ExecutionState,
+        scope: &'run TaskScope<'run>,
     ) -> Result<(), ComputeError>;
 
     fn name(&self) -> &str;
-
-    fn state(&self) -> Option<HashMap<String, Box<dyn Any>>>;
 }

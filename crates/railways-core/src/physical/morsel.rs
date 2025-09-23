@@ -1,5 +1,6 @@
 use std::any::{type_name, type_name_of_val, Any};
 
+use opentelemetry::trace::SpanContext;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -9,9 +10,10 @@ pub struct CastError {
     found: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MorselContext {
     iter: bool,
+    span: SpanContext,
 }
 
 pub struct Morsel {
@@ -66,5 +68,14 @@ impl Morsel {
         })?;
 
         Ok((*mapped, self.context))
+    }
+
+    pub fn with_span_context(mut self, context: SpanContext) -> Self {
+        self.context.span = context;
+        self
+    }
+
+    pub fn span_context(&self) -> &SpanContext {
+        &self.context.span
     }
 }

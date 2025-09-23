@@ -1,9 +1,11 @@
-use std::sync::Arc;
+use std::{error::Error, sync::Arc};
+
+use opentelemetry::{global::BoxedTracer, trace::Tracer};
 
 use crate::physical::{
     morsel::Morsel,
     pipe::{ReceivePipe, SendPipe},
-    state::ExecutionState,
+    scope::TaskScope,
     ComputeNode,
 };
 
@@ -12,14 +14,13 @@ pub enum TaskPriority {
     High,
     /// Auxiliary tasks which have dependents
     Normal,
-    /// Background tasks
+    /// Background (DAG tail) tasks
     Low,
 }
 
 pub struct Task {
     receivers: Vec<ReceivePipe<Morsel>>,
     senders: Vec<SendPipe<Morsel>>,
-    state: ExecutionState,
     compute: Arc<dyn ComputeNode>,
 }
 
@@ -32,8 +33,26 @@ impl Task {
         Self {
             receivers,
             senders,
-            state: ExecutionState::new(),
             compute,
         }
+    }
+
+    pub async fn run(self, tracer: &BoxedTracer) -> Result<(), Box<dyn Error>> {
+        let result = tracer.in_span(self.compute.name().to_owned(), |ctx| {
+            let scope = TaskScope::new(ctx, tracer);
+
+            let result =
+                self.compute
+                    .spawn(self.receivers.as_slice(), self.senders.as_slice(), &scope);
+
+            if let Err(error) = &result {
+                scope.record_error(error);
+            }
+
+            result
+        });
+
+        result?;
+        Ok(())
     }
 }
