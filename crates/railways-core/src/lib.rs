@@ -1,6 +1,7 @@
 pub mod dsl;
 pub mod physical;
 pub mod plan;
+pub mod schema;
 
 mod plans {
     use petgraph::visit::ControlFlow;

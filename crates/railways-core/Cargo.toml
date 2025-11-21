@@ -11,3 +11,4 @@ thiserror = "2.0.16"
 crossbeam-channel = "0.5.15"
 futures = { workspace = true }
 opentelemetry = { workspace = true }
+place_macro = "1.1.0"

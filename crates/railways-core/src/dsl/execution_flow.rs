@@ -1,28 +1,49 @@
-use std::hash::{Hash, Hasher};
+use std::{
+    any::{type_name, TypeId},
+    hash::{Hash, Hasher},
+};
 
-use crate::dsl::{Identify, LogicalNode, LogicalSource, LogicalTarget};
+use crate::dsl::{Identify, IntoLogicalTarget, LogicalNode, LogicalSource, LogicalTarget};
 
+/// Execution marker type
+pub struct Execution;
+
+#[derive(Clone, Copy)]
 pub struct ExecutionFlow<'a> {
     source: &'a dyn LogicalNode<'a>,
+    name: &'a str,
     index: usize,
+}
+
+impl<'a, const REQUIRED: bool> IntoLogicalTarget<'a, REQUIRED> for ExecutionFlow<'a> {
+    type Target = ExecutionFlowTarget<'a, REQUIRED>;
+
+    fn into_target(&self, name: &'a str, index: usize) -> Self::Target {
+        ExecutionFlowTarget::new(self.clone(), name, index)
+    }
 }
 
 impl<'a> Hash for ExecutionFlow<'a> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write(b"ExecutionFlow");
-        state.write_u64(self.source.identity());
+        state.write(self.name.as_bytes());
         state.write_usize(self.index);
+        state.write_u64(self.source.identity());
     }
 }
 
 impl<'a> ExecutionFlow<'a> {
-    pub fn new(source: &'a dyn LogicalNode<'a>, index: usize) -> Self {
-        Self { source, index }
+    pub fn new(source: &'a dyn LogicalNode<'a>, name: &'a str, index: usize) -> Self {
+        Self {
+            source,
+            name,
+            index,
+        }
     }
 }
 
 impl<'a> LogicalSource<'a> for ExecutionFlow<'a> {
-    fn source(&'a self) -> &'a dyn LogicalNode<'a> {
+    fn node(&'a self) -> &'a dyn LogicalNode<'a> {
         self.source
     }
 
@@ -32,28 +53,40 @@ impl<'a> LogicalSource<'a> for ExecutionFlow<'a> {
 
     fn info(&self) -> super::PinInformation {
         super::PinInformation::builder()
-            .name("ExecutionFlow")
+            .ty(TypeId::of::<Execution>())
+            .ty_name(type_name::<Execution>())
+            .name(self.name)
             .build()
+    }
+
+    fn boxed_clone(&self) -> Box<dyn LogicalSource<'a> + 'a> {
+        Box::new(self.clone())
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct ExecutionFlowTarget<'a, const REQUIRED: bool> {
-    source: Option<&'a ExecutionFlow<'a>>,
+    source: Option<ExecutionFlow<'a>>,
+    name: &'a str,
     index: usize,
 }
 
 impl<'a, const REQUIRED: bool> ExecutionFlowTarget<'a, REQUIRED> {
-    pub fn new(source: impl Into<Option<&'a ExecutionFlow<'a>>>, index: usize) -> Self {
+    pub fn new(source: impl Into<Option<ExecutionFlow<'a>>>, name: &'a str, index: usize) -> Self {
         Self {
             source: source.into(),
+            name,
             index,
         }
     }
 }
 
 impl<'a, const REQUIRED: bool> LogicalTarget<'a> for ExecutionFlowTarget<'a, REQUIRED> {
-    fn source(&'a self) -> Option<&'a dyn LogicalSource<'a>> {
-        self.source.map(|s| s as &'a dyn LogicalSource<'a>)
+    fn source<'b>(&'b self) -> Option<&'b dyn LogicalSource<'a>>
+    where
+        'a: 'b,
+    {
+        self.source.as_ref().map(|s| s as &'b dyn LogicalSource<'a>)
     }
 
     fn index(&self) -> usize {
@@ -62,7 +95,9 @@ impl<'a, const REQUIRED: bool> LogicalTarget<'a> for ExecutionFlowTarget<'a, REQ
 
     fn info(&self) -> super::PinInformation {
         super::PinInformation::builder()
-            .name("ExecutionFlowTarget")
+            .name(self.name)
+            .ty(TypeId::of::<Execution>())
+            .ty_name(type_name::<Execution>())
             .required(REQUIRED)
             .build()
     }
@@ -70,12 +105,17 @@ impl<'a, const REQUIRED: bool> LogicalTarget<'a> for ExecutionFlowTarget<'a, REQ
     fn is_required(&self) -> bool {
         REQUIRED
     }
+
+    fn boxed_clone(&self) -> Box<dyn LogicalTarget<'a> + 'a> {
+        Box::new(self.clone())
+    }
 }
 
 impl<'a, const REQUIRED: bool> Hash for ExecutionFlowTarget<'a, REQUIRED> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write(b"ExecutionFlowTarget");
-        state.write_u64(self.source.identity());
+        state.write(self.name.as_bytes());
         state.write_usize(self.index);
+        state.write_u64(self.source.identity());
     }
 }

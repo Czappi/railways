@@ -10,17 +10,26 @@ impl<'a, T: LogicalNode<'a> + ?Sized> Identify for Node<'a, T> {
     }
 }
 
-impl<'a, T: LogicalNode<'a> + ?Sized> LogicalNode<'a> for Node<'a, T> {
+impl<'a, T: LogicalNode<'a> + Sized> LogicalNode<'a> for Node<'a, T> {
     fn name(&self) -> String {
         self.0.name()
     }
 
-    fn sources(&'a self) -> Vec<Box<dyn super::LogicalSource<'a> + 'a>> {
-        self.0.sources()
+    fn outputs(&'a self) -> Vec<Box<dyn super::LogicalSource<'a> + 'a>> {
+        self.0.outputs()
     }
 
-    fn targets(&'a self) -> Vec<Box<dyn super::LogicalTarget<'a> + 'a>> {
-        self.0.targets()
+    fn inputs<'b>(&'b self) -> Vec<&'b dyn super::LogicalTarget<'a>>
+    where
+        'a: 'b,
+    {
+        self.0.inputs()
+    }
+
+    fn into_compute(
+        self,
+    ) -> Result<Box<dyn crate::physical::ComputeNode>, super::IntoComputeNodeError> {
+        self.0.into_compute()
     }
 }
 
@@ -29,7 +38,7 @@ impl<'a, T: LogicalNode<'a> + Sized> Node<'a, T> {
         Node(Box::new(node), PhantomData)
     }
 
-    pub fn node(&self) -> &'a dyn LogicalNode {
+    pub fn node(&'_ self) -> &'a dyn LogicalNode<'_> {
         self.0.as_ref()
     }
 }

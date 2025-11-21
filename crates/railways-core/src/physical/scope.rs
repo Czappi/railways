@@ -2,7 +2,7 @@ use std::error::Error;
 
 use opentelemetry::{
     global::BoxedTracer,
-    trace::{Span, SpanBuilder, SpanContext, SpanRef, TraceContextExt, Tracer},
+    trace::{SpanContext, TraceContextExt, Tracer},
     Context, KeyValue,
 };
 

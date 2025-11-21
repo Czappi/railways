@@ -1,22 +1,9 @@
 # Railways
 
-Flutter State-management library (A superset of Bloc)
+DAG-based parallel execution engine
 
-## Why yet another state-management library
+## Resources used
 
-I don't want to reinvent the wheel, but I was always dissatisfied with how Bloc handles errors (basically have to have it as part of the state).
-So I'm going to create my really opinionated library built upon Bloc which handles errors outside of the state.
+[Zhao, S., Dai, X., Bate, I., Burns, A. and Chang, W. (2020). DAG Scheduling and Analysis on Multiprocessor Systems: Exploitation of Parallelism and Dependency. [online] pp.128–140. doi:https://doi.org/10.1109/rtss49844.2020.00022.](https://ieeexplore.ieee.org/document/9355569)
 
-## Packages
-
-### railways
-
-Main Flutter package
-
-### railways_riverpod
-
-Riverpod mixins for Railways classes
-
-### railways_viaduct
-
-Bridge for the Railways flutter package and the Viaduct Rust-Flutter bindings generator.
+[Kaur, G. (2016). A DAG based Task Scheduling Algorithms for Multiprocessor System - A Survey. International Journal of Grid and Distributed Computing, 9(9), pp.103–114. doi:https://doi.org/10.14257/ijgdc.2016.9.9.10.](https://article.nadiapub.com/IJGDC/vol9_no9/10.pdf)
