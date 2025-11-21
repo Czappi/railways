@@ -1,10 +1,12 @@
 use std::{
-    any::{type_name, TypeId},
+    any::{type_name, Any, TypeId},
     hash::{Hash, Hasher},
     marker::PhantomData,
 };
 
-use crate::dsl::{Identify, IntoLogicalTarget, LogicalNode, LogicalSource, LogicalTarget};
+use crate::dsl::{
+    Identify, IntoLogicalTarget, LogicalNode, LogicalSource, LogicalTarget, PinConnectionError,
+};
 
 /// [Value] indicate that a `T` typed value will be received.
 ///
@@ -144,7 +146,30 @@ impl<'a, T: 'static, const REQUIRED: bool> LogicalTarget<'a> for ValueTarget<'a,
     fn boxed_clone(&self) -> Box<dyn LogicalTarget<'a> + 'a> {
         Box::new(self.clone())
     }
+
+    fn set_source(
+        &'a mut self,
+        source: &'a dyn LogicalSource<'a>,
+    ) -> Result<(), PinConnectionError> {
+        let source = source.boxed_clone() as Box<dyn Any + 'a>;
+        downcast_logical_target();
+        if let Some(source) = source.as_ref().downcast_ref::<&'a Value<'a, T>>() {
+            self.source = Some();
+            Ok(())
+        } else {
+            Err(PinConnectionError::TypeMismatch {
+                source_id: source.identity(),
+                target_id: self.identity(),
+                source_type: source.info().ty_name.unwrap_or_default(),
+                target_type: self.info().ty_name.unwrap_or_default(),
+            })
+        }
+    }
 }
+
+railways_utils::downcast::impl_downcast_ref!(logical_target, LogicalTarget<'a>, |reference| {
+    reference.info().ty
+});
 
 impl<'a, T: 'static, const REQUIRED: bool> ValueTarget<'a, T, REQUIRED> {
     pub fn new(source: impl Into<Option<Value<'a, T>>>, name: &'a str, index: usize) -> Self {

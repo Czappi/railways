@@ -343,6 +343,7 @@ dependencies = [
  "opentelemetry",
  "petgraph",
  "place_macro",
+ "railways-utils",
  "rand",
  "thiserror",
  "typed-builder",
@@ -351,6 +352,9 @@ dependencies = [
 [[package]]
 name = "railways-utils"
 version = "0.1.0"
+dependencies = [
+ "place_macro",
+]
 
 [[package]]
 name = "rand"

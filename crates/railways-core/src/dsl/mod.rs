@@ -52,6 +52,31 @@ pub enum IntoComputeNodeError {
     PinConnection(Vec<PinConnectionError>),
 }
 
+pub struct PinConnectionChecker;
+
+impl PinConnectionChecker {
+    pub fn check<'a, LT: LogicalTarget<'a> + ?Sized>(
+        target: &LT,
+        source: Option<&'a dyn LogicalSource<'a>>,
+    ) -> Result<(), PinConnectionError> {
+        match (target.is_required(), source.is_some()) {
+            (false, true) | (true, true) => {
+                match source.filter(|s| s.info().ty != target.info().ty) {
+                    Some(source) => Err(PinConnectionError::TypeMismatch {
+                        source_id: source.identity(),
+                        target_id: target.identity(),
+                        source_type: source.info().ty_name.unwrap_or_default(),
+                        target_type: target.info().ty_name.unwrap_or_default(),
+                    }),
+                    None => Ok(()),
+                }
+            }
+            (true, false) => Err(PinConnectionError::MissingRequiredSource(target.identity())),
+            (false, false) => Ok(()),
+        }
+    }
+}
+
 pub trait LogicalNode<'a>: Identify {
     fn name(&self) -> String;
 
@@ -142,24 +167,13 @@ pub trait LogicalTarget<'a>: Identify {
 
     fn is_required(&self) -> bool;
 
-    fn check(&self) -> Result<(), PinConnectionError> {
-        match (self.is_required(), self.source().as_ref().is_some()) {
-            (false, true) | (true, true) => match self
-                .source()
-                .as_ref()
-                .filter(|s| s.info().ty != self.info().ty)
-            {
-                Some(source) => Err(PinConnectionError::TypeMismatch {
-                    source_id: source.identity(),
-                    target_id: self.identity(),
-                    source_type: source.info().ty_name.unwrap_or_default(),
-                    target_type: self.info().ty_name.unwrap_or_default(),
-                }),
-                None => Ok(()),
-            },
-            (true, false) => Err(PinConnectionError::MissingRequiredSource(self.identity())),
-            (false, false) => Ok(()),
-        }
+    fn set_source(
+        &'a mut self,
+        source: &'a dyn LogicalSource<'a>,
+    ) -> Result<(), PinConnectionError>;
+
+    fn check(&'a self) -> Result<(), PinConnectionError> {
+        PinConnectionChecker::check(self, self.source())
     }
 
     fn boxed_clone(&self) -> Box<dyn LogicalTarget<'a> + 'a>;
