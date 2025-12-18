@@ -1,4 +1,5 @@
 pub mod dsl;
+pub mod expr;
 pub mod physical;
 pub mod plan;
 pub mod schema;

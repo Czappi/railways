@@ -151,10 +151,8 @@ impl<'a, T: 'static, const REQUIRED: bool> LogicalTarget<'a> for ValueTarget<'a,
         &'a mut self,
         source: &'a dyn LogicalSource<'a>,
     ) -> Result<(), PinConnectionError> {
-        let source = source.boxed_clone() as Box<dyn Any + 'a>;
-        downcast_logical_target();
-        if let Some(source) = source.as_ref().downcast_ref::<&'a Value<'a, T>>() {
-            self.source = Some();
+        if let Some(source) = downcast_logical_target::<Value<'a, T>>(source) {
+            self.source = Some(source.clone());
             Ok(())
         } else {
             Err(PinConnectionError::TypeMismatch {
@@ -166,10 +164,6 @@ impl<'a, T: 'static, const REQUIRED: bool> LogicalTarget<'a> for ValueTarget<'a,
         }
     }
 }
-
-railways_utils::downcast::impl_downcast_ref!(logical_target, LogicalTarget<'a>, |reference| {
-    reference.info().ty
-});
 
 impl<'a, T: 'static, const REQUIRED: bool> ValueTarget<'a, T, REQUIRED> {
     pub fn new(source: impl Into<Option<Value<'a, T>>>, name: &'a str, index: usize) -> Self {
